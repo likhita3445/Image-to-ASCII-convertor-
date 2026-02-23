@@ -1,0 +1,90 @@
+# 1. Install necessary library (Run once)
+# !pip install pillow-avif-plugin
+
+import PIL.Image
+from PIL import ImageEnhance
+from google.colab import files
+
+# --- CONFIGURATION ---
+# Set this to TRUE if using Colab (Dark Background)
+# Set to FALSE if printing on White Paper
+DARK_THEME_MODE = True
+
+# 2. Define Palette
+if DARK_THEME_MODE:
+    # FOR COLAB (Dark Background):
+    # Light pixels (Face) need Dense text ("@") to look bright/white.
+    # Dark pixels (Suit) need Sparse text (".") to look dark/empty.
+    ASCII_CHARS = [" ", ".", ":", "-", "=", "+", "*", "#", "%", "@"]
+else:
+    # FOR NOTEPAD (White Background):
+    # Dark pixels (Suit) need Dense text ("@") to look dark/black.
+    ASCII_CHARS = ["@", "%", "#", "*", "+", "=", "-", ":", ".", " "]
+
+def resize_image(image, new_width=100):
+    width, height = image.size
+    ratio = height / width / 1.65
+    new_height = int(new_width * ratio)
+    return image.resize((new_width, new_height))
+
+def grayify(image):
+    return image.convert("L")
+
+def pixels_to_ascii(image):
+    pixels = image.getdata()
+    ascii_str = ""
+    # Smart Mapping using the length of our palette
+    # This automatically adjusts math if we add/remove characters
+    num_chars = len(ASCII_CHARS)
+
+    for pixel in pixels:
+        # Map 0-255 to 0-(num_chars-1)
+        index = (pixel * num_chars) // 256
+        ascii_str += ASCII_CHARS[index]
+
+    return ascii_str
+
+def main():
+    # 3. Upload
+    print("Please upload your image file:")
+    uploaded = files.upload()
+
+    if not uploaded:
+        print("No file uploaded.")
+        return
+
+    filename = list(uploaded.keys())[0]
+
+    try:
+        image = PIL.Image.open(filename)
+    except:
+        print(f"Unable to find image: {filename}")
+        return
+
+    # 4. Contrast Adjustment (LOWERED)
+    # Changed from 1.5 to 1.1 (Only 10% boost, or set to 1.0 for none)
+    enhancer = ImageEnhance.Contrast(image)
+    image = enhancer.enhance(1.1)
+
+   # 5. The Logic Pipelin
+    new_width =80
+    new_image_data = pixels_to_ascii(grayify(resize_image(image, new_width)))
+
+    # Format into grid
+    pixel_count = len(new_image_data)
+    ascii_image = "\n".join([new_image_data[index:(index+new_width)]
+                             for index in range(0, pixel_count, new_width)])
+
+    # 6. Save and Print
+    output_filename = "brad_ascii.txt"
+    with open(output_filename, "w") as f:
+        f.write(ascii_image)
+
+    print(f"\nSUCCESS! Saved to {output_filename}")
+    print("-" * 50)
+    print(ascii_image)
+    print("-" * 50)
+    print("Tip: If the art looks like a 'Negative', change DARK_THEME_MODE to False at the top of the code!")
+
+if __name__ == "__main__":
+    main()
